@@ -10,6 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "${SCRIPT_DIR}/lib/nginx.sh"
 . "${SCRIPT_DIR}/lib/users.sh"
 . "${SCRIPT_DIR}/lib/deploy.sh"
+. "${SCRIPT_DIR}/lib/audit.sh"
 
 prompt_basic() {
     read -rp "Nama project: " RAW_NAME
@@ -91,7 +92,11 @@ case "$COMMAND" in
     shift
     deploy_project "$@"
     ;;
+  audit)
+    shift
+    test_isolation "$@"
+    ;;
   *)
-    die "Usage: $0 {add|delete|list|deploy}"
+    die "Usage: $0 {add|delete|list|deploy|audit} [args]"
     ;;
 esac

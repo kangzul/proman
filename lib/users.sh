@@ -25,6 +25,12 @@ WITH_DB=${WITH_DB}
 DB_NAME=${DB_NAME:-}
 DB_USER=${DB_USER:-}
 PHP_VER=${PHP_VER}
+# 1. DELETE_PATHS: Folder di repo yang ingin dihapus sebelum diganti symlink
+# Kita hapus folder uploads bawaan repo agar tidak bentrok dengan symlink
+DELETE_PATHS=""
+# 2. SYMLINK_PATHS: Format "source_di_shared:target_di_release"
+# Menghubungkan .env dan folder uploads dari shared ke folder release terbaru
+SYMLINK_PATHS=""
 CREATED_AT=$(date +%F)
 EOF
 
@@ -55,11 +61,13 @@ delete_project() {
 
     rm -f "${NGINX_ENABLED}/${SITE_USER}.conf"
     rm -f "${NGINX_AVAIL}/${SITE_USER}.conf"
-    nginx -t && systemctl reload nginx || true
+    nginx -t && systemctl reload nginx || die "Gagal reload Nginx"
 
     if [[ "$WEB_TYPE" == "php" ]]; then
+        rm -f "/etc/tmpfiles.d/php-fpm-${SITE_USER}.conf"
+        rm -rf "/tmp/php_${SITE_USER}"
         rm -f "${PHP_POOL_DIR}/${SITE_USER}.conf"
-        systemctl reload "php${PHP_VER}-fpm" || true
+        systemctl reload "php${PHP_VER}-fpm" || die "Gagal reload PHP-FPM"
         rm -f "/etc/apparmor.d/php-fpm-${SITE_USER}"
     fi
 
@@ -71,6 +79,6 @@ delete_project() {
         "
     fi
 
-    userdel -r "$SITE_USER" || true
+    userdel -r "$SITE_USER" || die "Gagal menghapus user Linux"
     echo "PROJECT DIHAPUS TOTAL"
 }
