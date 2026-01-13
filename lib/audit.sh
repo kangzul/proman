@@ -16,6 +16,7 @@ check_result() {
 
 test_isolation() {
     local TARGET_USER=$1
+    local DEFAULT_USER='kangzul'
     echo "--- Menjalankan Audit Keamanan untuk: $TARGET_USER ---"
 
     echo "Menguji isolasi antar user..."
@@ -25,7 +26,7 @@ test_isolation() {
     set -e
     check_result $rc "Menguji isolasi antar user"
     
-    local OTHER_ENV="/home/kangzul/shared/.env"
+    local OTHER_ENV="/home/${DEFAULT_USER}/shared/.env"
     if [ -f "$OTHER_ENV" ]; then
         set +e
         sudo -u "$TARGET_USER" cat "$OTHER_ENV" > /dev/null 2>&1
@@ -37,7 +38,7 @@ test_isolation() {
     echo "Menguji akses PHP-CLI ke file di luar project (harus diblokir)..."
     set +e
     # Coba baca file .env milik project lain via PHP-CLI
-    sudo -u "$TARGET_USER" php -r "@file_get_contents('/home/otheruser/shared/.env');" > /dev/null 2>&1
+    sudo -u "$TARGET_USER" php -r "@file_get_contents('/home/${DEFAULT_USER}/shared/.env');" > /dev/null 2>&1
     rc=$?
     set -e
     check_result $rc "PHP-CLI membaca file di luar project"
@@ -45,11 +46,11 @@ test_isolation() {
     echo "Menguji kemampuan menulis ke home user lain (harus diblokir)..."
     set +e
     # Coba buat file di folder shared milik user lain
-    sudo -u "$TARGET_USER" touch /home/otheruser/shared/.proman_audit_test > /dev/null 2>&1
+    sudo -u "$TARGET_USER" touch /home/${DEFAULT_USER}/shared/.proman_audit_test > /dev/null 2>&1
     rc=$?
     # Cleanup if created (best-effort)
     if [[ $rc -eq 0 ]]; then
-        rm -f /home/otheruser/shared/.proman_audit_test 2>/dev/null || true
+        rm -f /home/${DEFAULT_USER}/shared/.proman_audit_test 2>/dev/null || true
     fi
     set -e
     check_result $rc "Menulis ke folder shared milik user lain"

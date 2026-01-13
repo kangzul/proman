@@ -31,6 +31,6 @@ database.default.DBDriver = MySQLi
 database.default.charset = utf8mb4
 database.default.DBCollat = utf8mb4_unicode_ci
 EOF
-    chmod 640 "${BASE_DIR}/shared/.env"
+    chmod 600 "${BASE_DIR}/shared/.env"
     chown "${SITE_USER}:${SITE_USER}" "${BASE_DIR}/shared/.env"
 }

@@ -80,7 +80,7 @@ deploy_project() {
 
     # Shared
     chmod 750 "$SHARED" || die "Gagal chmod shared"
-    chmod 640 "$ENV_FILE" || die "Gagal chmod .env"
+    chmod 600 "$ENV_FILE" || die "Gagal chmod .env"
 
     # Public (read-only for nginx)
     find "$NEW_RELEASE/public" -type d -exec chmod 755 {} \; || die "Gagal chmod folder dalam public dirs"

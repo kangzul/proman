@@ -11,8 +11,13 @@ prepare_directories() {
         "$BASE_DIR/releases" \
         "$BASE_DIR/shared" \
         "$BASE_DIR/current"
-
     chown -R "${SITE_USER}:${SITE_USER}" "$BASE_DIR"
+
+    # Permissions: restrict project dirs
+    chmod 750 "$BASE_DIR" || true
+    chmod 750 "$BASE_DIR/releases" || true
+    chmod 750 "$BASE_DIR/shared" || true
+    chmod 750 "$BASE_DIR/current" || true
 }
 
 write_metadata() {
