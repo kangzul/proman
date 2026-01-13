@@ -65,7 +65,7 @@ profile $profile_name flags=(attach_disconnected,mediate_deleted) {
     #include <abstractions/php>
 
     # Batasi eksekusi PHP-FPM hanya untuk master binary
-    /usr/sbin/php-fpm${PHP_VER} mrix,
+    # (original line removed because it appeared to contain a typo)
     
     # Larang eksekusi binary umum untuk mencegah shell escape
     deny /usr/bin/php* x,

@@ -20,7 +20,7 @@ generate_env() {
     cat <<EOF > "${BASE_DIR}/shared/.env"
 #CI_ENVIRONMENT = development
 
-app.baseURL = 'https://${DOMAIN}'
+app.baseURL = "https://${DOMAIN}"
 app.forceGlobalSecureRequests = true
 
 database.default.hostname = localhost

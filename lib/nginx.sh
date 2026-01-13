@@ -2,7 +2,7 @@
 # Nginx site templates for php and static sites
 
 setup_nginx_php() {
-    cat <<'EOF' > "${NGINX_AVAIL}/${SITE_USER}.conf"
+    cat <<EOF > "${NGINX_AVAIL}/${SITE_USER}.conf"
 server {
     listen 80;
     server_name ${DOMAIN};
@@ -16,11 +16,11 @@ server {
     access_log /var/log/nginx/${SITE_USER}.access.log;
     error_log  /var/log/nginx/${SITE_USER}.error.log;
 
-    if ($is_env_scan) {
+    if (\$is_env_scan) {
         return 444;
     }
 
-    if ($is_backdoor_scan) {
+    if (\$is_backdoor_scan) {
         return 444;
     }
 
@@ -28,14 +28,14 @@ server {
 
     location / {
         limit_req zone=one burst=10 nodelay;
-        try_files $uri $uri/ /index.php?$query_string;
+        try_files \$uri \$uri/ /index.php?\$query_string;
     }
 
     location ~ ^/index\.php(/|$) {
         include fastcgi_params;
 
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        fastcgi_param DOCUMENT_ROOT $document_root;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT \$document_root;
 
         fastcgi_pass unix:/run/php/php-${SITE_USER}.sock;
         fastcgi_index index.php;
@@ -72,7 +72,7 @@ EOF
 }
 
 setup_nginx_static() {
-    cat <<'EOF' > "${NGINX_AVAIL}/${SITE_USER}.conf"
+    cat <<EOF > "${NGINX_AVAIL}/${SITE_USER}.conf"
 server {
     listen 80;
     server_name ${DOMAIN};
@@ -87,16 +87,16 @@ server {
     access_log /var/log/nginx/${SITE_USER}.access.log;
     error_log  /var/log/nginx/${SITE_USER}.error.log;
 
-    if ($is_env_scan) {
+    if (\$is_env_scan) {
         return 444;
     }
 
-    if ($is_backdoor_scan) {
+    if (\$is_backdoor_scan) {
         return 444;
     }
 
     location / {
-        try_files $uri $uri/ =404;
+        try_files \$uri \$uri/ =404;
     }
 
     location ~* \.(css|js|png|jpg|jpeg|gif|svg|ico|woff2?)$ {
