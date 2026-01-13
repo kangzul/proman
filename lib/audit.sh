@@ -19,26 +19,45 @@ test_isolation() {
     echo "--- Menjalankan Audit Keamanan untuk: $TARGET_USER ---"
 
     echo "Menguji isolasi antar user..."
+    set +e
     sudo -u "$TARGET_USER" ls /home > /dev/null 2>&1
+    rc=$?
+    set -e
+    check_result $rc "Menguji isolasi antar user"
     
-    local OTHER_ENV="/home/otheruser/shared/.env"
+    local OTHER_ENV="/home/kangzul/shared/.env"
     if [ -f "$OTHER_ENV" ]; then
+        set +e
         sudo -u "$TARGET_USER" cat "$OTHER_ENV" > /dev/null 2>&1
-        check_result $? "Membaca .env milik project lain"
+        rc=$?
+        set -e
+        check_result $rc "Membaca .env milik project lain"
     fi
 
     echo "Menguji pembatasan AppArmor (Binary)..."
+    set +e
     sudo -u "$TARGET_USER" php -r "echo 'hello';" > /dev/null 2>&1
-    check_result $? "Menjalankan binary PHP via CLI"
+    rc=$?
+    set -e
+    check_result $rc "Menjalankan binary PHP via CLI"
 
     echo "Menguji isolasi folder /tmp..."
+    set +e
     sudo -u "$TARGET_USER" touch /tmp/test_file > /dev/null 2>&1
-    check_result $? "Menulis langsung ke root /tmp"
+    rc=$?
+    set -e
+    check_result $rc "Menulis langsung ke root /tmp"
 
     echo "Menguji akses ke kernel/system info..."
+    set +e
     sudo -u "$TARGET_USER" cat /etc/shadow > /dev/null 2>&1
-    check_result $? "Membaca /etc/shadow"
-    
+    rc=$?
+    set -e
+    check_result $rc "Membaca /etc/shadow"
+
+    set +e
     sudo -u "$TARGET_USER" ls /root > /dev/null 2>&1
-    check_result $? "Membaca direktori /root"
+    rc=$?
+    set -e
+    check_result $rc "Membaca direktori /root"
 }
