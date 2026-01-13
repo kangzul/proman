@@ -34,19 +34,25 @@ test_isolation() {
         check_result $rc "Membaca .env milik project lain"
     fi
 
-    echo "Menguji pembatasan AppArmor (Binary)..."
+    echo "Menguji akses PHP-CLI ke file di luar project (harus diblokir)..."
     set +e
-    sudo -u "$TARGET_USER" php -r "echo 'hello';" > /dev/null 2>&1
+    # Coba baca file .env milik project lain via PHP-CLI
+    sudo -u "$TARGET_USER" php -r "@file_get_contents('/home/otheruser/shared/.env');" > /dev/null 2>&1
     rc=$?
     set -e
-    check_result $rc "Menjalankan binary PHP via CLI"
+    check_result $rc "PHP-CLI membaca file di luar project"
 
-    echo "Menguji isolasi folder /tmp..."
+    echo "Menguji kemampuan menulis ke home user lain (harus diblokir)..."
     set +e
-    sudo -u "$TARGET_USER" touch /tmp/test_file > /dev/null 2>&1
+    # Coba buat file di folder shared milik user lain
+    sudo -u "$TARGET_USER" touch /home/otheruser/shared/.proman_audit_test > /dev/null 2>&1
     rc=$?
+    # Cleanup if created (best-effort)
+    if [[ $rc -eq 0 ]]; then
+        rm -f /home/otheruser/shared/.proman_audit_test 2>/dev/null || true
+    fi
     set -e
-    check_result $rc "Menulis langsung ke root /tmp"
+    check_result $rc "Menulis ke folder shared milik user lain"
 
     echo "Menguji akses ke kernel/system info..."
     set +e
