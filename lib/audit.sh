@@ -5,7 +5,6 @@ set -u
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'
-
 check_result() {
     if [ $1 -ne 0 ]; then
         echo -e "${GREEN}[PASS]${NC} $2 (Akses diblokir)"
@@ -37,8 +36,7 @@ test_isolation() {
 
     echo "Menguji akses PHP-CLI ke file di luar project (harus diblokir)..."
     set +e
-    # Coba baca file .env milik project lain via PHP-CLI
-    sudo -u "$TARGET_USER" php -r "@file_get_contents('/home/${DEFAULT_USER}/shared/.env');" > /dev/null 2>&1
+    sudo -u "$TARGET_USER" php -r "exit(@is_readable('/home/${DEFAULT_USER}/shared/.env') ? 0 : 2);" > /dev/null 2>&1
     rc=$?
     set -e
     check_result $rc "PHP-CLI membaca file di luar project"
