@@ -27,8 +27,19 @@ validate_project() {
 }
 
 validate_domain() {
-    [[ "$1" =~ ^[a-zA-Z0-9.-]+$ ]] || die "Domain tidak valid"
-    [[ "$1" =~ \. && ! "$1" =~ \.\. ]] || die "Domain tidak valid"
+    local domain="$1"
+
+    if [[ ! "$domain" =~ ^[a-zA-Z0-9.-]+$ ]]; then
+        die "Domain mengandung karakter terlarang: $domain"
+    fi
+
+    if [[ ! "$domain" == *.* ]]; then
+        die "Format domain salah (butuh titik): $domain"
+    fi
+
+    if [[ "$domain" == *".."* ]]; then
+        die "Domain tidak boleh mengandung double dot (..): $domain"
+    fi
 }
 
 random_pass() {

@@ -12,6 +12,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "${SCRIPT_DIR}/lib/deploy.sh"
 . "${SCRIPT_DIR}/lib/audit.sh"
 
+mkdir -p "$NGINX_AVAIL" "$NGINX_ENABLED" "$PHP_POOL_DIR"
+
 prompt_basic() {
     read -rp "Nama project: " RAW_NAME
     read -rp "Domain: " DOMAIN
@@ -23,7 +25,9 @@ prompt_basic() {
 
     BASE_DIR="${WEB_ROOT_BASE}/${SITE_USER}"
 
-    id "$SITE_USER" &>/dev/null && die "Project sudah ada"
+    if id "$SITE_USER" &>/dev/null; then
+        die "Project/User ${SITE_USER} sudah ada"
+    fi
 }
 
 prompt_features() {
