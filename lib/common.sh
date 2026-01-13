@@ -4,7 +4,8 @@
 # Note: expects SCRIPT_DIR to be set by the caller before sourcing.
 
 PHP_VER="8.4"
-WEB_ROOT_BASE="/home"
+USER_HOME_BASE="/home"
+WEB_ROOT_BASE="/var/www"
 NGINX_AVAIL="/etc/nginx/sites-available"
 NGINX_ENABLED="/etc/nginx/sites-enabled"
 PHP_POOL_DIR="/etc/php/${PHP_VER}/fpm/pool.d"
@@ -57,4 +58,47 @@ run_as_user() {
     local _user="$1"
     shift
     sudo -u "${_user}" "$@"
+}
+
+# Detect php-fpm systemd service name. Returns service name (without .service) or empty.
+detect_php_fpm_service() {
+    local candidates=("php-${PHP_VER}-fpm" "php${PHP_VER}-fpm" "php${PHP_VER}fpm" "php-fpm")
+    local c
+    for c in "${candidates[@]}"; do
+        if systemctl list-unit-files --type=service --all | grep -q "^${c}\.service"; then
+            echo "${c}"
+            return 0
+        fi
+    done
+
+    for c in "${candidates[@]}"; do
+        if command -v "${c}" >/dev/null 2>&1; then
+            echo "${c}"
+            return 0
+        fi
+    done
+
+    # try globs
+    for p in /usr/sbin/php*-fpm /usr/bin/php*-fpm; do
+        if [[ -x "${p}" ]]; then
+            basename "${p}" | sed 's/\.service$//'
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+# Reload a service robustly. For php-fpm, auto-detect service name based on PHP_VER.
+system_reload() {
+    local svc="$1"
+    if [[ "$svc" == "php-fpm" ]]; then
+        local php_svc
+        php_svc=$(detect_php_fpm_service) || die "PHP-FPM service not found"
+        systemctl reload "${php_svc}" || die "Gagal reload ${php_svc}"
+        return 0
+    fi
+
+    # fallback: attempt to reload given service name
+    systemctl reload "${svc}" || die "Gagal reload ${svc}"
 }

@@ -67,8 +67,25 @@ server {
 EOF
     ln -sfn "${NGINX_AVAIL}/${SITE_USER}.conf" "${NGINX_ENABLED}/${SITE_USER}.conf"
 
+    PUBLIC_ROOT="${WEB_ROOT_BASE}/${SITE_USER}"
+    mkdir -p "${WEB_ROOT_BASE}"
+    ln -sfn "${BASE_DIR}/current/public" "${PUBLIC_ROOT}"
+
+    # Hardening: ensure public dir ownership and permissions
+    if [[ -d "${BASE_DIR}/current/public" ]]; then
+        chown -R "${SITE_USER}:www-data" "${BASE_DIR}/current/public" || true
+        chmod -R 750 "${BASE_DIR}/current/public" || true
+    fi
+
+    # Ensure central webroot directory ownership and permissions
+    chown root:www-data "${WEB_ROOT_BASE}" 2>/dev/null || true
+    chmod 755 "${WEB_ROOT_BASE}" 2>/dev/null || true
+
+    # Ensure user home base is not world-readable
+    chmod 711 "${USER_HOME_BASE}" 2>/dev/null || true
+
     nginx -t || die "Config nginx error"
-    systemctl reload nginx
+    system_reload nginx
 }
 
 setup_nginx_static() {
@@ -111,6 +128,24 @@ server {
 EOF
     ln -sfn "${NGINX_AVAIL}/${SITE_USER}.conf" "${NGINX_ENABLED}/${SITE_USER}.conf"
 
+    # Ensure public webroot symlink from central webroot to user's project public
+    PUBLIC_ROOT="${WEB_ROOT_BASE}/${SITE_USER}"
+    mkdir -p "${WEB_ROOT_BASE}"
+    ln -sfn "${BASE_DIR}/current/public" "${PUBLIC_ROOT}"
+
+    # Hardening: ensure public dir ownership and permissions
+    if [[ -d "${BASE_DIR}/current/public" ]]; then
+        chown -R "${SITE_USER}:www-data" "${BASE_DIR}/current/public" || true
+        chmod -R 750 "${BASE_DIR}/current/public" || true
+    fi
+
+    # Ensure central webroot directory ownership and permissions
+    chown root:www-data "${WEB_ROOT_BASE}" 2>/dev/null || true
+    chmod 755 "${WEB_ROOT_BASE}" 2>/dev/null || true
+
+    # Ensure user home base is not world-readable
+    chmod 711 "${USER_HOME_BASE}" 2>/dev/null || true
+
     nginx -t || die "Config nginx error"
-    systemctl reload nginx
+    system_reload nginx
 }

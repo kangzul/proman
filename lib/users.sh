@@ -19,7 +19,7 @@ write_metadata() {
     cat <<EOF > "${BASE_DIR}/.project.conf"
 PROJECT_NAME=${SITE_USER}
 DOMAIN=${DOMAIN}
-GIT_REPO=SILAHKAN DIISI
+GIT_REPO='SILAHKAN DIISI'
 WEB_TYPE=${WEB_TYPE}
 WITH_DB=${WITH_DB}
 DB_NAME=${DB_NAME:-}
@@ -39,11 +39,16 @@ EOF
 }
 
 list_project() {
-    for d in "${WEB_ROOT_BASE}"/*; do
+    local printed_projects=""
+    
+    for d in "${USER_HOME_BASE}"/*; do
         [[ -f "$d/.project.conf" ]] || continue
         # shellcheck disable=SC1090
         source "$d/.project.conf"
-        printf "%-15s %-30s\n" "$PROJECT_NAME" "$DOMAIN"
+        if [[ ! " $printed_projects " =~ " $PROJECT_NAME " ]]; then
+            printf "%-15s %-30s\n" "$PROJECT_NAME" "$DOMAIN"
+            printed_projects+="$PROJECT_NAME "
+        fi
     done
 }
 
@@ -51,7 +56,7 @@ delete_project() {
     local RAW_NAME="$1"
     SITE_USER=$(normalize_name "$RAW_NAME")
 
-    BASE_DIR="${WEB_ROOT_BASE}/${SITE_USER}"
+    BASE_DIR="${USER_HOME_BASE}/${SITE_USER}"
     META="${BASE_DIR}/.project.conf"
 
     [[ -f "$META" ]] || die "Metadata tidak ditemukan"
@@ -61,13 +66,21 @@ delete_project() {
 
     rm -f "${NGINX_ENABLED}/${SITE_USER}.conf"
     rm -f "${NGINX_AVAIL}/${SITE_USER}.conf"
-    nginx -t && systemctl reload nginx || die "Gagal reload Nginx"
+    nginx -t && system_reload nginx || die "Gagal reload Nginx"
 
     if [[ "$WEB_TYPE" == "php" ]]; then
-        rm -f "/etc/tmpfiles.d/php-fpm-${SITE_USER}.conf"
-        rm -rf "/tmp/php_${SITE_USER}"
+        # Unmount and remove per-site tmpfs if present
+        local tmp_dir="/tmp/php_${SITE_USER}"
+        if mountpoint -q "$tmp_dir"; then
+            umount "$tmp_dir" || echo "Warning: gagal umount $tmp_dir"
+        fi
+        # Remove fstab entry if present
+        if grep -qF "$tmp_dir tmpfs" /etc/fstab 2>/dev/null; then
+            sed -i "|${tmp_dir} tmpfs|d" /etc/fstab || true
+        fi
+        rm -rf "$tmp_dir"
         rm -f "${PHP_POOL_DIR}/${SITE_USER}.conf"
-        systemctl reload "php${PHP_VER}-fpm" || die "Gagal reload PHP-FPM"
+        system_reload php-fpm || die "Gagal reload PHP-FPM"
         rm -f "/etc/apparmor.d/php-fpm-${SITE_USER}"
     fi
 

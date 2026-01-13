@@ -8,7 +8,7 @@ deploy_project() {
     [[ -z "$project" || -z "$tag" ]] && \
         die "Usage: deploy <project> <git-tag>"
 
-    BASE_DIR="${WEB_ROOT_BASE}/${project}"
+    BASE_DIR="${USER_HOME_BASE}/${project}"
     META="$BASE_DIR/.project.conf"
 
     [[ -f "$META" ]] || die "Metadata tidak ditemukan"
@@ -34,8 +34,39 @@ deploy_project() {
     # Fungsi ini membaca variabel dari .project.conf yang baru di-source
     process_deployment_steps "$NEW_RELEASE" || die "Gagal proses deployment steps"
 
+    # Pre-deploy validation: verify nginx and php-fpm configs before switching symlink
+    nginx -t || die "Nginx config test failed"
+
+    # Robust detection of PHP-FPM binary (try several common names and locations)
+    php_fpm_bin=""
+    for candidate in "php-fpm${PHP_VER}" "php${PHP_VER}-fpm" "php-fpm"; do
+        if command -v "${candidate}" >/dev/null 2>&1; then
+            php_fpm_bin=$(command -v "${candidate}")
+            break
+        fi
+    done
+    if [[ -z "${php_fpm_bin}" ]]; then
+        for p in /usr/sbin/php*-fpm /usr/bin/php*-fpm; do
+            if [[ -x "${p}" ]]; then
+                php_fpm_bin="${p}"
+                break
+            fi
+        done
+    fi
+    if [[ -n "${php_fpm_bin}" ]]; then
+        "${php_fpm_bin}" -t || die "PHP-FPM config test failed for ${php_fpm_bin}"
+    fi
+
     # ensure permissions and symlink
     ln -sfn "$NEW_RELEASE" "$CURRENT"
+
+    # Hardening: ensure public dir perms and ownership, and central webroot ownership
+    if [[ -d "$BASE_DIR/current/public" ]]; then
+        chown -R ${SITE_USER}:www-data "$BASE_DIR/current/public" || true
+        chmod -R 750 "$BASE_DIR/current/public" || true
+    fi
+    chown root:www-data "$PUBLIC_ROOT" 2>/dev/null || true
+    chmod 755 "$PUBLIC_ROOT" 2>/dev/null || true
     ln -sfn "$BASE_DIR/current/public" "$PUBLIC_ROOT"
 
     chmod 711 /home

@@ -23,7 +23,7 @@ prompt_basic() {
     SITE_USER=$(normalize_name "$RAW_NAME")
     validate_project "$SITE_USER"
 
-    BASE_DIR="${WEB_ROOT_BASE}/${SITE_USER}"
+    BASE_DIR="${USER_HOME_BASE}/${SITE_USER}"
 
     if id "$SITE_USER" &>/dev/null; then
         die "Project/User ${SITE_USER} sudah ada"

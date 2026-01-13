@@ -48,7 +48,7 @@ EOF
     mkdir -p /tmp/php_${SITE_USER}
     chown ${SITE_USER}:${SITE_USER} /tmp/php_${SITE_USER}
     chmod 700 /tmp/php_${SITE_USER}
-    systemctl reload "php${PHP_VER}-fpm" || die "Gagal reload PHP-FPM"
+    system_reload php-fpm || die "Gagal reload PHP-FPM"
 }
 
 setup_apparmor() {
@@ -109,14 +109,24 @@ EOF
 }
 
 setup_tmp_isolation() {
-    local TMP_CONF="/etc/tmpfiles.d/php-fpm-${SITE_USER}.conf"
-    
-    # Format: Type Path Mode User Group Age Argument
-    # d = create directory if it doesn't exist
-    echo "d /tmp/php_${SITE_USER} 0700 ${SITE_USER} ${SITE_USER} -" > "$TMP_CONF"
-    
-    # Jalankan langsung agar folder tersedia sekarang tanpa reboot
-    systemd-tmpfiles --create "$TMP_CONF" || die "Gagal membuat folder isolasi temp"
+    local tmp_dir="/tmp/php_${SITE_USER}"
+
+    # Determine uid/gid for the site user
+    local uid gid
+    uid=$(id -u "${SITE_USER}")
+    gid=$(id -g "${SITE_USER}")
+
+    mkdir -p "${tmp_dir}"
+
+    # Mount tmpfs with noexec,nosuid and correct owner/mode if not already mounted
+    if ! mountpoint -q "${tmp_dir}"; then
+        mount -t tmpfs -o mode=0700,uid=${uid},gid=${gid},noexec,nosuid tmpfs "${tmp_dir}" || die "Gagal mount tmpfs untuk ${tmp_dir}"
+    fi
+
+    # Persist in /etc/fstab if not present
+    if ! grep -qF "${tmp_dir} tmpfs" /etc/fstab 2>/dev/null; then
+        echo "tmpfs ${tmp_dir} tmpfs mode=0700,uid=${uid},gid=${gid},noexec,nosuid 0 0" >> /etc/fstab
+    fi
 }
 
 setup_php_stack() {
