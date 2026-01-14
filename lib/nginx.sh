@@ -7,7 +7,7 @@ server {
     listen 80;
     server_name ${DOMAIN};
     #include snippets/ssl-strong.conf;
-    root ${BASE_DIR}/current/public;
+    root ${WEB_ROOT_BASE}/${SITE_USER};
     index index.php;
 
     #ssl_certificate /etc/nginx/ssl/folder/fullchain.pem;
@@ -69,6 +69,10 @@ EOF
 
     PUBLIC_ROOT="${WEB_ROOT_BASE}/${SITE_USER}"
     mkdir -p "${WEB_ROOT_BASE}"
+    # Ensure the release public directory exists so the symlink won't be dangling
+    mkdir -p "${BASE_DIR}/current/public"
+    chown -R "${SITE_USER}:${SITE_USER}" "${BASE_DIR}/current/public" || true
+    chmod -R 750 "${BASE_DIR}/current/public" || true
     ln -sfn "${BASE_DIR}/current/public" "${PUBLIC_ROOT}"
 
     # Hardening: ensure public dir ownership and permissions
@@ -131,6 +135,10 @@ EOF
     # Ensure public webroot symlink from central webroot to user's project public
     PUBLIC_ROOT="${WEB_ROOT_BASE}/${SITE_USER}"
     mkdir -p "${WEB_ROOT_BASE}"
+    # Ensure the release public directory exists so the symlink won't be dangling
+    mkdir -p "${BASE_DIR}/current/public"
+    chown -R "${SITE_USER}:${SITE_USER}" "${BASE_DIR}/current/public" || true
+    chmod -R 750 "${BASE_DIR}/current/public" || true
     ln -sfn "${BASE_DIR}/current/public" "${PUBLIC_ROOT}"
 
     # Hardening: ensure public dir ownership and permissions

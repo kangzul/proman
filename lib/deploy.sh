@@ -65,23 +65,23 @@ deploy_project() {
 
     # ensure permissions and symlink
     # If $CURRENT exists as a plain directory (from initial setup),
-    # move any release-like entries into $RELEASES and replace $CURRENT with a symlink.
     if [[ -d "$CURRENT" && ! -L "$CURRENT" ]]; then
-        echo "Info: $CURRENT exists as directory; migrating release entries into $RELEASES"
-        mkdir -p "$RELEASES"
-        for d in "$CURRENT"/*; do
-            if [[ -e "$d" ]]; then
-                name=$(basename "$d")
-                if [[ "$name" =~ ^[0-9]{14}- ]]; then
-                    mv -f "$d" "$RELEASES/" || die "Gagal memindahkan $d ke $RELEASES"
-                fi
-            fi
-        done
-        # remove current if empty
-        if [[ -z "$(ls -A "$CURRENT" 2>/dev/null)" ]]; then
-            rmdir "$CURRENT" || die "Gagal menghapus direktori $CURRENT"
+        echo "Info: $CURRENT exists as directory; replacing it with symlink to new release"
+        # Safety check: ensure we're operating on the expected current path
+        [[ -n "$BASE_DIR" && "$CURRENT" == "$BASE_DIR/current" ]] || die "Safety: unexpected CURRENT path: $CURRENT"
+
+        # Remove all entries inside current (files, dirs, symlinks)
+        if find "$CURRENT" -mindepth 1 -maxdepth 1 -print -exec rm -rf {} +; then
+            echo "Info: Bersih -> $CURRENT"
         else
-            die "$CURRENT masih berisi file/direktori non-release; bersihkan manual sebelum deploy"
+            die "Gagal menghapus isi $CURRENT"
+        fi
+
+        # Remove the now-empty current directory so ln -sfn can create a symlink
+        if rmdir "$CURRENT"; then
+            echo "Info: Menghapus direktori $CURRENT untuk digantikan symlink"
+        else
+            die "Gagal menghapus direktori $CURRENT"
         fi
     fi
 
