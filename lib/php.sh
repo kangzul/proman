@@ -126,6 +126,8 @@ setup_tmp_isolation() {
     # Persist in /etc/fstab if not present
     if ! grep -qF "${tmp_dir} tmpfs" /etc/fstab 2>/dev/null; then
         echo "tmpfs ${tmp_dir} tmpfs mode=0700,uid=${uid},gid=${gid},noexec,nosuid 0 0" >> /etc/fstab
+        # Reload systemd to pick up fstab changes so mount doesn't warn
+        systemctl daemon-reload || true
     fi
 }
 
