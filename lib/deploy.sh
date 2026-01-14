@@ -30,8 +30,11 @@ deploy_project() {
     TS=$(date +%Y%m%d%H%M%S)
     NEW_RELEASE="$RELEASES/$TS-$tag"
 
-    # clone as site user into the target release directory
-    run_as_user "$project" bash -c "git clone --branch '$tag' --depth=1 '$GIT_REPO' '$NEW_RELEASE'"
+    # clone as site user into the target release directory (avoid nested bash -c quoting)
+    run_as_user "$project" git clone --branch "$tag" --depth=1 "$GIT_REPO" "$NEW_RELEASE"
+
+    # verify clone created the release dir
+    [[ -d "$NEW_RELEASE" ]] || die "Gagal clone repo ke $NEW_RELEASE"
 
     # --- TAHAP DINAMIS: CLEANUP & SYMLINK ---
     # Fungsi ini membaca variabel dari .project.conf yang baru di-source
@@ -61,6 +64,27 @@ deploy_project() {
     fi
 
     # ensure permissions and symlink
+    # If $CURRENT exists as a plain directory (from initial setup),
+    # move any release-like entries into $RELEASES and replace $CURRENT with a symlink.
+    if [[ -d "$CURRENT" && ! -L "$CURRENT" ]]; then
+        echo "Info: $CURRENT exists as directory; migrating release entries into $RELEASES"
+        mkdir -p "$RELEASES"
+        for d in "$CURRENT"/*; do
+            if [[ -e "$d" ]]; then
+                name=$(basename "$d")
+                if [[ "$name" =~ ^[0-9]{14}- ]]; then
+                    mv -f "$d" "$RELEASES/" || die "Gagal memindahkan $d ke $RELEASES"
+                fi
+            fi
+        done
+        # remove current if empty
+        if [[ -z "$(ls -A "$CURRENT" 2>/dev/null)" ]]; then
+            rmdir "$CURRENT" || die "Gagal menghapus direktori $CURRENT"
+        else
+            die "$CURRENT masih berisi file/direktori non-release; bersihkan manual sebelum deploy"
+        fi
+    fi
+
     ln -sfn "$NEW_RELEASE" "$CURRENT"
 
     # Hardening: ensure public dir perms and ownership, and central webroot ownership
@@ -70,7 +94,11 @@ deploy_project() {
     fi
     chown root:www-data "$PUBLIC_ROOT" 2>/dev/null || true
     chmod 755 "$PUBLIC_ROOT" 2>/dev/null || true
-    ln -sfn "$BASE_DIR/current/public" "$PUBLIC_ROOT"
+    if [[ -d "$BASE_DIR/current/public" ]]; then
+        ln -sfn "$BASE_DIR/current/public" "$PUBLIC_ROOT"
+    else
+        echo "Warning: ${BASE_DIR}/current/public not found; skipping ${PUBLIC_ROOT} symlink"
+    fi
 
     chmod 711 /home
     chmod 711 "$BASE_DIR"
@@ -86,11 +114,19 @@ deploy_project() {
     chmod 600 "$ENV_FILE" || die "Gagal chmod .env"
 
     # Public (read-only for nginx)
-    find "$NEW_RELEASE/public" -type d -exec chmod 755 {} \; || die "Gagal chmod folder dalam public dirs"
-    find "$NEW_RELEASE/public" -type f -exec chmod 644 {} \; || die "Gagal chmod file dalam public dirs"
+    if [[ -d "$NEW_RELEASE/public" ]]; then
+        find "$NEW_RELEASE/public" -type d -exec chmod 755 {} \; || die "Gagal chmod folder dalam public dirs"
+        find "$NEW_RELEASE/public" -type f -exec chmod 644 {} \; || die "Gagal chmod file dalam public dirs"
+    else
+        echo "Warning: $NEW_RELEASE/public tidak ditemukan; melewati langkah chmod untuk public files"
+    fi
 
-    # Folder public tetap harus bisa dibaca nginx
-    chmod 750 "$PUBLIC_ROOT"
+    # Folder public tetap harus bisa dibaca nginx (only if exists)
+    if [[ -e "$PUBLIC_ROOT" ]]; then
+        chmod 750 "$PUBLIC_ROOT"
+    else
+        echo "Warning: ${PUBLIC_ROOT} missing; skipping chmod"
+    fi
 
     echo "Deploy sukses: $project @ $tag"
 }
