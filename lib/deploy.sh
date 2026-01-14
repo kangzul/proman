@@ -15,6 +15,9 @@ deploy_project() {
     # shellcheck disable=SC1090
     source "$META"
 
+    # Ensure SITE_USER is defined (fallback to project name)
+    SITE_USER="${SITE_USER:-$project}"
+
     RELEASES="$BASE_DIR/releases"
     SHARED="$BASE_DIR/shared"
     CURRENT="$BASE_DIR/current"
@@ -62,7 +65,7 @@ deploy_project() {
 
     # Hardening: ensure public dir perms and ownership, and central webroot ownership
     if [[ -d "$BASE_DIR/current/public" ]]; then
-        chown -R ${SITE_USER}:www-data "$BASE_DIR/current/public" || true
+        chown -R "${SITE_USER}:www-data" "$BASE_DIR/current/public" || true
         chmod -R 750 "$BASE_DIR/current/public" || true
     fi
     chown root:www-data "$PUBLIC_ROOT" 2>/dev/null || true
@@ -74,7 +77,7 @@ deploy_project() {
     chmod 711 "$RELEASES"
 
     # Berikan akses ke Nginx melalui grup, bukan 'others'
-    chown -R ${SITE_USER}:www-data "$NEW_RELEASE"
+    chown -R "${SITE_USER}:www-data" "$NEW_RELEASE"
     find "$NEW_RELEASE" -type d -exec chmod 750 {} \;
     find "$NEW_RELEASE" -type f -exec chmod 640 {} \;
 
