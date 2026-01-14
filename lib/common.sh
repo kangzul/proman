@@ -62,6 +62,15 @@ run_as_user() {
 
 # Detect php-fpm systemd service name. Returns service name (without .service) or empty.
 detect_php_fpm_service() {
+    # Try to find any php-fpm unit first (handles different PHP versions)
+    local svc
+    svc=$(systemctl list-unit-files --type=service --all | awk -F'.service' '/php[0-9.]*-fpm/ {print $1; exit}') || true
+    if [[ -n "$svc" ]]; then
+        echo "$svc"
+        return 0
+    fi
+
+    # Fall back to configured PHP_VER candidates
     local candidates=("php-${PHP_VER}-fpm" "php${PHP_VER}-fpm" "php${PHP_VER}fpm" "php-fpm")
     local c
     for c in "${candidates[@]}"; do
@@ -78,7 +87,7 @@ detect_php_fpm_service() {
         fi
     done
 
-    # try globs
+    # try globs for php*-fpm binaries
     for p in /usr/sbin/php*-fpm /usr/bin/php*-fpm; do
         if [[ -x "${p}" ]]; then
             basename "${p}" | sed 's/\.service$//'

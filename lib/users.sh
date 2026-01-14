@@ -81,7 +81,7 @@ delete_project() {
         fi
         # Remove fstab entry if present
         if grep -qF "$tmp_dir tmpfs" /etc/fstab 2>/dev/null; then
-            sed -i "|${tmp_dir} tmpfs|d" /etc/fstab || true
+            sed -i "\|${tmp_dir} tmpfs|d" /etc/fstab || true
         fi
         rm -rf "$tmp_dir"
         rm -f "${PHP_POOL_DIR}/${SITE_USER}.conf"
